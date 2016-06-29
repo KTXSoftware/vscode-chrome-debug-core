@@ -15,7 +15,8 @@ import * as logger from '../logger';
 import {formatConsoleMessage} from './consoleHelper';
 import * as Chrome from './chromeDebugProtocol';
 
-import {spawn, ChildProcess} from 'child_process';
+import {spawn, fork, ChildProcess} from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 
 interface IScopeVarHandle {
@@ -25,7 +26,7 @@ interface IScopeVarHandle {
 
 export class ChromeDebugAdapter implements IDebugAdapter {
     private static THREAD_ID = 1;
-    private static PAGE_PAUSE_MESSAGE = 'Paused in Visual Studio Code';
+    private static PAGE_PAUSE_MESSAGE = 'Paused in Kode Studio';
     private static EXCEPTION_VALUE_ID = 'EXCEPTION_VALUE_ID';
     private static PLACEHOLDER_URL_PROTOCOL = 'debugadapter://';
 
@@ -97,49 +98,115 @@ export class ChromeDebugAdapter implements IDebugAdapter {
     public launch(args: ILaunchRequestArgs): Promise<void> {
         this.setupLogging(args);
 
-        // Check exists?
-        const chromePath = args.runtimeExecutable || utils.getBrowserPath();
-        if (!chromePath) {
-            return utils.errP(`Can't find Chrome - install it or set the "runtimeExecutable" field in the launch config.`);
-        }
+        return new Promise<void>((resolve, reject) => {
+            fs.stat(path.resolve(args.cwd, 'Kha'), (err, stats) => {
+                let options = {
+                    from: args.cwd,
+                    to: path.join(args.cwd, 'build'),
+                    projectfile: 'khafile.js',
+                    target: 'debug-html5',
+                    vr: 'none',
+                    pch: false,
+                    intermediate: '',
+                    graphics: 'direct3d9',
+                    visualstudio: 'vs2015',
+                    kha: '',
+                    haxe: '',
+                    ogg: '',
+                    aac: '',
+                    mp3: '',
+                    h264: '',
+                    webm: '',
+                    wmv: '',
+                    theora: '',
+                    kfx: '',
+                    krafix: '',
+                    ffmpeg: args.ffmpeg,
+                    nokrafix: false,
+                    embedflashassets: false,
+                    compile: false,
+                    run: false,
+                    init: false,
+                    name: 'Project',
+                    server: false,
+                    port: 8080,
+                    debug: false,
+                    silent: false
+                };
+                let success = false;
+                if (err == null) {
+                    try {
+                        success = require(path.join(args.cwd, 'Kha/Tools/khamake/main.js'))
+                            .run(options, {
+                                info: message => {
+                                    this.fireEvent(new OutputEvent(message + '\n','stdout'));
+                                }, error: message => {
+                                    this.fireEvent(new OutputEvent(message + '\n', 'stderr'));
+                                }
+                            }, function (name) { });
+                    }
+                    catch (error) {
+                        this.fireEvent(new OutputEvent('Error: ' + error.toString() + '\n', 'stderr'));
+                    }
+                }
+                else {
+                    try {
+                        success = require(path.join(args.kha, 'Tools/khamake/main.js'))
+                            .run(options, {
+                                info: message => {
+                                    this.fireEvent(new OutputEvent(message + '\n','stdout'));
+                                }, error: message => {
+                                    this.fireEvent(new OutputEvent(message + '\n', 'stderr'));
+                                }
+                            }, function (name) { });
+                    }
+                    catch (error) {
+                        this.fireEvent(new OutputEvent('Error: ' + error.toString() + '\n', 'stderr'));
+                    }
+                }
 
-        // Start with remote debugging enabled
-        const port = args.port || 9222;
-        const chromeArgs: string[] = ['--remote-debugging-port=' + port];
+                if (!success) {
+                    reject('Last compilation failed.');
+                } else {
+                    // Check exists?
+                    const chromePath = args.runtimeExecutable;
+                    let chromeDir = chromePath;
+                    if (chromePath.lastIndexOf('/') >= 0)
+                        chromeDir = chromePath.substring(0, chromePath.lastIndexOf('/'));
+                    else if (chromePath.lastIndexOf('\\') >= 0)
+                        chromeDir = chromePath.substring(0, chromePath.lastIndexOf('\\'));
 
-        // Also start with extra stuff disabled
-        chromeArgs.push(...['--no-first-run', '--no-default-browser-check']);
-        if (args.runtimeArgs) {
-            chromeArgs.push(...args.runtimeArgs);
-        }
+                    // Start with remote debugging enabled
+                    const port = args.port || Math.floor((Math.random() * 10000) + 10000);
+                    const chromeArgs: string[] = ['--remote-debugging-port=' + port];
 
-        if (args.userDataDir) {
-            chromeArgs.push('--user-data-dir=' + args.userDataDir);
-        }
+                    chromeArgs.push(path.resolve(args.cwd, args.file));
 
-        let launchUrl: string;
-        if (args.file) {
-            launchUrl = utils.pathToFileURL(args.file);
-        } else if (args.url) {
-            launchUrl = args.url;
-        }
+                    let launchUrl: string;
+                    if (args.file) {
+                        launchUrl = utils.pathToFileURL(path.join(args.cwd, args.file, 'index.html'));
+                    } else if (args.url) {
+                        launchUrl = args.url;
+                    }
 
-        if (launchUrl) {
-            chromeArgs.push(launchUrl);
-        }
+                    logger.log(`spawn('${chromePath}', ${JSON.stringify(chromeArgs) })`);
+                    this._chromeProc = spawn(chromePath, chromeArgs, {
+                        detached: true,
+                        stdio: ['ignore'],
+                        cwd: chromeDir
+                    });
+                    this._chromeProc.unref();
+                    this._chromeProc.on('error', (err) => {
+                        logger.log('chrome error: ' + err);
+                        this.terminateSession();
+                    });
 
-        logger.log(`spawn('${chromePath}', ${JSON.stringify(chromeArgs) })`);
-        this._chromeProc = spawn(chromePath, chromeArgs, {
-            detached: true,
-            stdio: ['ignore']
+                    this._attach(port, launchUrl, args.address).then(() => {
+                        resolve();
+                    });
+                }
+            });
         });
-        this._chromeProc.unref();
-        this._chromeProc.on('error', (err) => {
-            logger.log('chrome error: ' + err);
-            this.terminateSession();
-        });
-
-        return this._attach(port, launchUrl, args.address);
     }
 
     public attach(args: IAttachRequestArgs): Promise<void> {

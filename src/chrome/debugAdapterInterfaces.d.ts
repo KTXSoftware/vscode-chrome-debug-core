@@ -21,6 +21,9 @@ export interface ILaunchRequestArgs extends DebugProtocol.LaunchRequestArguments
     diagnosticLogging?: boolean;
     verboseDiagnosticLogging?: boolean;
     userDataDir?: string;
+    kha?: string;
+    ffmpeg?: string;
+    cwd?: string;
 }
 
 export interface IAttachRequestArgs extends DebugProtocol.AttachRequestArguments {
@@ -31,6 +34,7 @@ export interface IAttachRequestArgs extends DebugProtocol.AttachRequestArguments
     sourceMaps?: boolean;
     diagnosticLogging?: boolean;
     verboseDiagnosticLogging?: boolean;
+    cwd?: string;
 }
 
 export interface ISetBreakpointsArgs extends DebugProtocol.SetBreakpointsArguments {
