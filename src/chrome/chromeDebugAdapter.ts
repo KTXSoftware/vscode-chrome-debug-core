@@ -150,7 +150,6 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                 this.fireEvent(new OutputEvent('Error: ' + error.toString() + '\n', 'stderr'));
             }
 
-            success = true;
             if (!success) {
                 this.fireEvent(new OutputEvent('Launch canceled.\n', 'stderr'));
                 resolve();
