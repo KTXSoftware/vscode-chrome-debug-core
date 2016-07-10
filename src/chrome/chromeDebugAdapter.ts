@@ -98,6 +98,8 @@ export class ChromeDebugAdapter implements IDebugAdapter {
     public launch(args: ILaunchRequestArgs): Promise<void> {
         this.setupLogging(args);
 
+        this.fireEvent(new OutputEvent('Using Kha from ' + args.kha + '\n', 'stdout'));
+
         return new Promise<void>((resolve, reject) => {
             fs.stat(path.resolve(args.cwd, 'Kha'), (err, stats) => {
                 let options = {
@@ -139,7 +141,7 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                         success = require(path.join(args.cwd, 'Kha/Tools/khamake/main.js'))
                             .run(options, {
                                 info: message => {
-                                    this.fireEvent(new OutputEvent(message + '\n','stdout'));
+                                    this.fireEvent(new OutputEvent(message + '\n', 'stdout'));
                                 }, error: message => {
                                     this.fireEvent(new OutputEvent(message + '\n', 'stderr'));
                                 }
@@ -154,7 +156,7 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                         success = require(path.join(args.kha, 'Tools/khamake/main.js'))
                             .run(options, {
                                 info: message => {
-                                    this.fireEvent(new OutputEvent(message + '\n','stdout'));
+                                    this.fireEvent(new OutputEvent(message + '\n', 'stdout'));
                                 }, error: message => {
                                     this.fireEvent(new OutputEvent(message + '\n', 'stderr'));
                                 }
@@ -165,8 +167,12 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                     }
                 }
 
+                success = true;
                 if (!success) {
-                    reject('Last compilation failed.');
+                    this.fireEvent(new OutputEvent('Launch canceled.\n', 'stderr'));
+                    resolve();
+                    this.fireEvent(new TerminatedEvent());
+                    this.clearEverything();
                 } else {
                     // Check exists?
                     const chromePath = args.runtimeExecutable;
