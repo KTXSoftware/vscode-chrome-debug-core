@@ -167,7 +167,7 @@ export class ChromeDebugAdapter implements IDebugAdapter {
 
                 // Start with remote debugging enabled
                 const port = args.port || Math.floor((Math.random() * 10000) + 10000);
-                const chromeArgs: string[] = ['--remote-debugging-port=' + port];
+                const chromeArgs: string[] = ['-chromedebug', '--remote-debugging-port=' + port];
 
                 chromeArgs.push(path.resolve(args.cwd, args.file));
 
