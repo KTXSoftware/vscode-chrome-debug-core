@@ -8,6 +8,8 @@
 
 import {DebugProtocol} from 'vscode-debugprotocol';
 
+export type ISourceMapPathOverrides = { [pattern: string]: string };
+
 export interface ILaunchRequestArgs extends DebugProtocol.LaunchRequestArguments {
     webRoot?: string;
     runtimeArgs?: string[];
@@ -21,6 +23,7 @@ export interface ILaunchRequestArgs extends DebugProtocol.LaunchRequestArguments
     diagnosticLogging?: boolean;
     verboseDiagnosticLogging?: boolean;
     userDataDir?: string;
+    sourceMapPathOverrides?: ISourceMapPathOverrides;
     kha?: string;
     ffmpeg?: string;
     cwd?: string;
@@ -34,6 +37,7 @@ export interface IAttachRequestArgs extends DebugProtocol.AttachRequestArguments
     sourceMaps?: boolean;
     diagnosticLogging?: boolean;
     verboseDiagnosticLogging?: boolean;
+    sourceMapPathOverrides?: ISourceMapPathOverrides;
     cwd?: string;
 }
 
@@ -43,20 +47,17 @@ export interface ISetBreakpointsArgs extends DebugProtocol.SetBreakpointsArgumen
     authoredPath?: string;
 }
 
-export interface IBreakpoint extends DebugProtocol.Breakpoint {
-    column?: number;
-}
-
 /*
  * The ResponseBody interfaces are copied from debugProtocol.d.ts which defines these inline in the Response interfaces.
  * They should always match those interfaces, see the original for comments.
  */
 export interface ISetBreakpointsResponseBody {
-    breakpoints: IBreakpoint[];
+    breakpoints: DebugProtocol.Breakpoint[];
 }
 
 export interface ISourceResponseBody {
     content: string;
+    mimeType?: string;
 }
 
 export interface IThreadsResponseBody {
