@@ -143,13 +143,19 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                     this.fireEvent(new OutputEvent(message + '\n', 'stderr'));
                 }
             }).then((value: string) => {
-                // Check exists?
-                const chromePath = args.runtimeExecutable;
-                let chromeDir = chromePath;
-                if (chromePath.lastIndexOf('/') >= 0)
-                    chromeDir = chromePath.substring(0, chromePath.lastIndexOf('/'));
-                else if (chromePath.lastIndexOf('\\') >= 0)
-                    chromeDir = chromePath.substring(0, chromePath.lastIndexOf('\\'));
+                // Use vscode's electron
+                //const chromePath = args.runtimeExecutable;
+                //let chromeDir = chromePath;
+                //if (chromePath.lastIndexOf('/') >= 0)
+                //    chromeDir = chromePath.substring(0, chromePath.lastIndexOf('/'));
+                //else if (chromePath.lastIndexOf('\\') >= 0)
+                //    chromeDir = chromePath.substring(0, chromePath.lastIndexOf('\\'));
+
+                // Use custom electron
+                const chromeDir = path.join(__dirname, '..', '..', '..', 'node_modules', 'electron', 'dist');
+                let chromePath = chromeDir;
+                if (process.platform === 'win32') chromePath = path.join(chromePath, 'electron.exe');
+                else chromePath = path.join(chromePath, 'electron');
 
                 // Start with remote debugging enabled
                 const port = args.port || Math.floor((Math.random() * 10000) + 10000);
