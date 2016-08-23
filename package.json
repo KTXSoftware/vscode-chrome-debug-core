@@ -10,7 +10,7 @@
   "bugs": "https://github.com/microsoft/vscode-chrome-debug-core/issues",
   "license": "SEE LICENSE IN LICENSE.txt",
   "typings": "./lib/src/index",
-  "main": "./out/src/index",
+  "main": "./out/index",
   "dependencies": {
     "source-map": "^0.5.6",
     "vscode-debugadapter": "^1.9.0",
@@ -39,6 +39,6 @@
   },
   "scripts": {
     "test": "node ./node_modules/mocha/bin/mocha --recursive -u tdd ./out/test/",
-    "postinstall": "typings install"
+    "postinstall": "cd src && typings install"
   }
 }
