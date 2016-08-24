@@ -156,6 +156,7 @@ export class ChromeDebugAdapter implements IDebugAdapter {
                 const chromeDir = path.join(__dirname, '..', '..', '..', 'node_modules', 'electron', 'dist');
                 let chromePath = chromeDir;
                 if (process.platform === 'win32') chromePath = path.join(chromePath, 'electron.exe');
+                else if (process.platform === 'darwin') chromePath = path.join(chromePath, 'Electron.app', 'Contents', 'MacOS', 'Electron');
                 else chromePath = path.join(chromePath, 'electron');
 
                 // Start with remote debugging enabled
